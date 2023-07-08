@@ -2,8 +2,7 @@ const express = require('express')
 const jsonWebToken = require('jsonwebtoken')
 const bodyParser = require("body-parser")
 const bcrypt = require("bcryptjs")
-// const database = require('./db')
-const connectDB = require('./db/server')
+const connectDB = require('./db/serverDB')
 const PORT = process.env.PORT || 5000
 const JWT_CODE = process.env.JWT_CODE
 require("dotenv").config();
@@ -19,7 +18,9 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     next();
 });
+app.get("/offers", (req,res) => {
 
+})
 app.get("/users", (req, res) => {
     res.json({
         "users": [{
@@ -54,7 +55,7 @@ app.get("/users", (req, res) => {
     })
 })
 
-app.post('/register', (req, res) => {
+app.post('/register', async (req, res) => {
     if (!req.body.email || !req.body.password || !req.body.name) {
         res.json({success: false, error: "Send needed params"})
         return
@@ -67,9 +68,9 @@ app.post('/register', (req, res) => {
         password: bcrypt.hashSync(req.body.password, 10),
     }).then((user) => {
         const token = jsonWebToken.sign({id: user._id, email: user.email}, JWT_CODE)
-        res.json({success: true, token: token})
+        res.json({success: true, result: token})
     }).catch(err => {
-        res.json({success: false, error: "Podany e-mail jest już zajęty"})
+        res.json({success: false, result: "Podany e-mail jest już zajęty"})
     })
 })
 
