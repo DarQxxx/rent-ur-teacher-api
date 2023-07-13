@@ -10,7 +10,8 @@ const app = express()
 app.use(express.json())
 app.use(bodyParser.json())
 const mongoose = require("mongoose");
-const User = require('./db/models/user.js')
+const {User} = require('./db/models/user.js')
+const {Offer} = require('./db/models/offer')
 connectDB();
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -18,9 +19,16 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     next();
 });
-app.get("/offers", (req,res) => {
-
-})
+const getUserIdFromToken = (token) => {
+    try {
+        const decodedToken = jsonWebToken.verify(token, JWT_CODE);
+        const userId = decodedToken.id;
+        return userId;
+    } catch (error) {
+        console.error('Błąd weryfikacji tokenu JWT:', error);
+        return null;
+    }
+};
 app.get("/users", (req, res) => {
     res.json({
         "users": [{
@@ -57,7 +65,7 @@ app.get("/users", (req, res) => {
 
 app.post('/register', async (req, res) => {
     if (!req.body.email || !req.body.password || !req.body.name) {
-        res.json({success: false, error: "Send needed params"})
+        res.json({success: false, result: "Send needed params"})
         return
     }
     // const {name, email, password} = req.body;
@@ -76,25 +84,49 @@ app.post('/register', async (req, res) => {
 
 app.post('/login', (req, res) => {
     if (!req.body.email || !req.body.password) {
-        res.json({success: false, error: "Send needed params"})
+        res.json({success: false, result: "Send needed params"})
         return
     }
     // const {email, password} = req.body;
     // res.json({email, password})
     User.findOne({ email:req.body.email}).then(user=>{
         if (!user) {
-            res.json({ success: false, error: "Użytkownik o podanym e-mailu nie istnieje"})
+            res.json({ success: false, result: "Użytkownik o podanym e-mailu nie istnieje"})
         } else {
             if (!bcrypt.compareSync(req.body.password, user.password)){
-                res.json({ success: false, error: "Nieprawidłowy e-mail lub hasło"})
+                res.json({ success: false, result: "Nieprawidłowy e-mail lub hasło"})
             } else {
                 const token = jsonWebToken.sign({ id:user._id, email: user.email}, JWT_CODE)
-                res.json({success: true, token: token,})
+                res.json({success: true, result: token,})
             }
         }
     }).catch((err) => {
-        res.json({ success: false, error: "Coś poszło nie tak, spróbuj jeszcze raz"})
+        res.json({ success: false, result: "Coś poszło nie tak, spróbuj jeszcze raz"})
     })
+})
+
+app.post('/offer', async (req, res) => {
+    // stawka / przedmiot / osoba / opis / ---data utworzenia--- /
+    if (!req.body.price || !req.body.theme || !req.body.token || !req.body.description) {
+        res.json({success: false, error: "Send needed params"})
+        return
+    }
+    const userId = getUserIdFromToken(req.body.token)
+    const user = await User.findById(userId)
+    //user._id -> new ObjectId("xxx")
+    // user.email: string, user.password : haszed, user.name, user.profilePicture
+    if (user){
+        Offer.create({
+            theme: req.body.theme,
+            description: req.body.description,
+            price: req.body.price,
+            userId: user._id
+        }).then((offer) => {
+            res.json({success: true, result: offer})
+        }).catch(err => {
+            res.json({success: false, result: "Coś poszło nie tak"})
+        })
+    }
 })
 
 mongoose.connection.once('open', () => {

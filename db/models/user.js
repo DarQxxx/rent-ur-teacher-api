@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const user = new mongoose.Schema({
+const userSchema = new mongoose.Schema({
         email: {
             type: String,
             unique: true,
@@ -15,7 +15,16 @@ const user = new mongoose.Schema({
         name: {
             type: String,
             required: true
-        }
+        },
+        profilePicture: {
+            type: String,
+            default: 'https://thumbs.dreamstime.com/b/default-avatar-profile-icon-vector-social-media-user-photo-183042379.jpg'
+        },
     }, { collection: "users"}
 )
-module.exports = mongoose.model("User", user)
+const User = mongoose.model('User', userSchema);
+
+module.exports = {
+    User,
+    userSchema
+};
