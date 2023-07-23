@@ -22,8 +22,7 @@ app.use((req, res, next) => {
 const getUserIdFromToken = (token) => {
     try {
         const decodedToken = jsonWebToken.verify(token, JWT_CODE);
-        const userId = decodedToken.id;
-        return userId;
+        return decodedToken;
     } catch (error) {
         console.error('Błąd weryfikacji tokenu JWT:', error);
         return null;
@@ -97,7 +96,7 @@ app.post('/login', (req, res) => {
                 res.json({ success: false, result: "Nieprawidłowy e-mail lub hasło"})
             } else {
                 const token = jsonWebToken.sign({ id:user._id, email: user.email}, JWT_CODE)
-                res.json({success: true, result: token,})
+                res.json({success: true, result: token})
             }
         }
     }).catch((err) => {
@@ -107,24 +106,29 @@ app.post('/login', (req, res) => {
 
 app.post('/offer', async (req, res) => {
     // stawka / przedmiot / osoba / opis / ---data utworzenia--- /
-    if (!req.body.price || !req.body.theme || !req.body.token || !req.body.description) {
+    if (!req.body.price || !req.body.theme || !req.body.token || !req.body.description || !req.body.title || !req.body.city || !req.body.email) {
         res.json({success: false, error: "Send needed params"})
         return
     }
-    const userId = getUserIdFromToken(req.body.token)
-    const user = await User.findById(userId)
+    const decodedToken = getUserIdFromToken(req.body.token)
+    const user = await User.findById(decodedToken.id)
     //user._id -> new ObjectId("xxx")
     // user.email: string, user.password : haszed, user.name, user.profilePicture
     if (user){
         Offer.create({
+            title: req.body.title,
             theme: req.body.theme,
             description: req.body.description,
             price: req.body.price,
+            city: req.body.city,
+            email: req.body.email,
+            phone: req.body.phone,
+            name: user.name,
             userId: user._id
         }).then((offer) => {
             res.json({success: true, result: offer})
         }).catch(err => {
-            res.json({success: false, result: "Coś poszło nie tak"})
+            res.json({success: false, result: "Error occured"})
         })
     }
 })
