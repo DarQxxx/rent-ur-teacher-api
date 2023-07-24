@@ -7,6 +7,7 @@ const PORT = process.env.PORT || 5000
 const JWT_CODE = process.env.JWT_CODE
 require("dotenv").config();
 const app = express()
+const ObjectId = require('mongoose').Types.ObjectId;
 app.use(express.json())
 app.use(bodyParser.json())
 const mongoose = require("mongoose");
@@ -24,7 +25,7 @@ const getUserIdFromToken = (token) => {
         const decodedToken = jsonWebToken.verify(token, JWT_CODE);
         return decodedToken;
     } catch (error) {
-        console.error('Błąd weryfikacji tokenu JWT:', error);
+        // console.error('Błąd weryfikacji tokenu JWT:', error);
         return null;
     }
 };
@@ -88,50 +89,91 @@ app.post('/login', (req, res) => {
     }
     // const {email, password} = req.body;
     // res.json({email, password})
-    User.findOne({ email:req.body.email}).then(user=>{
+    User.findOne({email: req.body.email}).then(user => {
         if (!user) {
-            res.json({ success: false, result: "Użytkownik o podanym e-mailu nie istnieje"})
+            res.json({success: false, result: "Użytkownik o podanym e-mailu nie istnieje"})
         } else {
-            if (!bcrypt.compareSync(req.body.password, user.password)){
-                res.json({ success: false, result: "Nieprawidłowy e-mail lub hasło"})
+            if (!bcrypt.compareSync(req.body.password, user.password)) {
+                res.json({success: false, result: "Nieprawidłowy e-mail lub hasło"})
             } else {
-                const token = jsonWebToken.sign({ id:user._id, email: user.email}, JWT_CODE)
+                const token = jsonWebToken.sign({id: user._id, email: user.email}, JWT_CODE)
                 res.json({success: true, result: token})
             }
         }
     }).catch((err) => {
-        res.json({ success: false, result: "Coś poszło nie tak, spróbuj jeszcze raz"})
+        res.json({success: false, result: "Coś poszło nie tak, spróbuj jeszcze raz"})
     })
 })
 
 app.post('/offer', async (req, res) => {
-    // stawka / przedmiot / osoba / opis / ---data utworzenia--- /
     if (!req.body.price || !req.body.theme || !req.body.token || !req.body.description || !req.body.title || !req.body.city || !req.body.email) {
-        res.json({success: false, error: "Send needed params"})
+        res.json({success: false, error: "Missing params"})
         return
     }
     const decodedToken = getUserIdFromToken(req.body.token)
-    const user = await User.findById(decodedToken.id)
-    //user._id -> new ObjectId("xxx")
-    // user.email: string, user.password : haszed, user.name, user.profilePicture
-    if (user){
-        Offer.create({
-            title: req.body.title,
-            theme: req.body.theme,
-            description: req.body.description,
-            price: req.body.price,
-            city: req.body.city,
-            email: req.body.email,
-            phone: req.body.phone,
-            name: user.name,
-            userId: user._id
-        }).then((offer) => {
-            res.json({success: true, result: offer})
-        }).catch(err => {
-            res.json({success: false, result: "Error occured"})
-        })
+    if (decodedToken) {
+        const user = await User.findById(decodedToken.id)
+        if (user) {
+            Offer.create({
+                title: req.body.title,
+                theme: req.body.theme,
+                description: req.body.description,
+                price: req.body.price,
+                city: req.body.city,
+                email: req.body.email,
+                phone: req.body.phone,
+                name: user.name,
+                userId: user._id
+            }).then((offer) => {
+                res.json({success: true, result: offer})
+            }).catch(err => {
+                res.json({success: false, result: "Error occured while creating object"})
+            })
+        } else {
+            res.json({success: false, result: "Invalid user token"})
+        }
+    } else {
+        res.status(500).json({result: "Invalid user token"})
     }
 })
+
+app.patch('/offer/:id', async (req, res) => {
+    if (!req.body.price || !req.body.theme || !req.body.token || !req.body.description || !req.body.title || !req.body.city || !req.body.email) {
+        res.json({success: false, error: "Missing params"})
+        return
+    }
+    const decodedToken = getUserIdFromToken(req.body.token)
+    if (decodedToken) {
+        const user = await User.findById(decodedToken.id)
+        if (user) {
+            try {
+                let updatedOffer = await Offer.findOneAndUpdate({_id: req.params.id}, {
+                    title: req.body.title,
+                    theme: req.body.theme,
+                    description: req.body.description,
+                    price: req.body.price,
+                    city: req.body.city,
+                    email: req.body.email,
+                    phone: req.body.phone,
+                }, {new: true})
+                if (updatedOffer) {
+                    res.json({offer: updatedOffer})
+                } else {
+                    res.status(404).json({result: "No existing object with given offer ID"})
+                }
+            } catch (e) {
+                console.log(e)
+                res.status(500).json({result: "No existing object with given offer ID"})
+            }
+        } else {
+            res.json({success: false, result: "Invalid user token"})
+        }
+    } else {
+        res.status(500).json({result: "Invalid user token"})
+    }
+
+})
+
 
 mongoose.connection.once('open', () => {
     console.log('Connected to MongoDB')
