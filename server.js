@@ -107,7 +107,7 @@ app.post('/login', (req, res) => {
 
 app.post('/offer', async (req, res) => {
     if (!req.body.price || !req.body.theme || !req.body.token || !req.body.description || !req.body.title || !req.body.city || !req.body.email) {
-        res.json({success: false, error: "Missing params"})
+        res.json({success: false, result: "Missing params"})
         return
     }
     const decodedToken = getUserIdFromToken(req.body.token)
@@ -136,10 +136,18 @@ app.post('/offer', async (req, res) => {
         res.status(500).json({result: "Invalid user token"})
     }
 })
-
+app.get('/offer/:id', async (req, res) => {
+    Offer.findOne({_id: req.params.id})
+        .then((data) => {
+            res.json({offer: data})
+        })
+        .catch ((err) => {
+            res.status(404).json({result: "No existing object with given offer ID"})
+        })
+})
 app.patch('/offer/:id', async (req, res) => {
     if (!req.body.price || !req.body.theme || !req.body.token || !req.body.description || !req.body.title || !req.body.city || !req.body.email) {
-        res.json({success: false, error: "Missing params"})
+        res.json({success: false, result: "Missing params"})
         return
     }
     const decodedToken = getUserIdFromToken(req.body.token)
