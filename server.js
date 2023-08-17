@@ -133,7 +133,7 @@ app.post('/offer', async (req, res) => {
             res.json({success: false, result: "Invalid user token"})
         }
     } else {
-        res.status(500).json({result: "Invalid user token"})
+        res.status(500).json({success: false, result: "Invalid user token"})
     }
 })
 app.get('/offer/:id', async (req, res) => {
@@ -142,7 +142,7 @@ app.get('/offer/:id', async (req, res) => {
             res.json({offer: data})
         })
         .catch ((err) => {
-            res.status(404).json({result: "No existing object with given offer ID"})
+            res.status(404).json({success: false, result: "No existing object with given offer ID"})
         })
 })
 app.patch('/offer/:id', async (req, res) => {
@@ -165,19 +165,19 @@ app.patch('/offer/:id', async (req, res) => {
                     phone: req.body.phone,
                 }, {new: true})
                 if (updatedOffer) {
-                    res.json({offer: updatedOffer})
+                    res.json({success: true, offer: updatedOffer})
                 } else {
-                    res.status(404).json({result: "No existing object with given offer ID"})
+                    res.status(404).json({success: false, result: "No existing object with given offer ID"})
                 }
             } catch (e) {
                 console.log(e)
-                res.status(500).json({result: "No existing object with given offer ID"})
+                res.status(500).json({success: false, result: "No existing object with given offer ID"})
             }
         } else {
             res.json({success: false, result: "Invalid user token"})
         }
     } else {
-        res.status(500).json({result: "Invalid user token"})
+        res.status(500).json({success: false, result: "Invalid user token"})
     }
 
 })
